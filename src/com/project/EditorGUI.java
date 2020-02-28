@@ -3,15 +3,16 @@ package com.project;
 import javax.swing.*;
 import java.awt.*;
 
-public class EditorGUI extends JFrame{
+class EditorGUI extends JFrame{
     private JTextArea jTextArea = new JTextArea(20,20);
     private JScrollPane jScrollPane = new JScrollPane(jTextArea);
-    private JTextField jTextField = new JTextField();
+    private JTextField fileName = new JTextField();
     private JButton saveButton = new JButton("Save");
     private JButton loadButton = new JButton("Open");
 
-    public EditorGUI() throws HeadlessException {
+    EditorGUI() throws HeadlessException {
         super("My editor");
+        FileEditor fileEditor = new FileEditor();
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int width = (int) screenSize.getWidth(), height = (int) screenSize.getHeight();
@@ -23,6 +24,22 @@ public class EditorGUI extends JFrame{
         jTextArea.setName("TextArea");
         jScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+
+        fileName.setName("FilenameField");
+        saveButton.setName("SaveButton");
+        loadButton.setName("LoadButton");
+        jScrollPane.setName("ScrollPane");
+
+        loadButton.addActionListener((e) -> {
+            if (fileEditor.loadFile(fileName.getText()) == null) {
+                JOptionPane.showMessageDialog(null, "Error in reading file", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        saveButton.addActionListener((e) -> {
+            if (!fileEditor.saveFile(fileName.getText(), jTextArea.getText())) {
+                JOptionPane.showMessageDialog(null, "Error in saving file", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         createLayout();
     }
@@ -38,7 +55,7 @@ public class EditorGUI extends JFrame{
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 3;
-        add(jTextField,c);
+        add(fileName,c);
 
         c.gridx = 3;
         c.gridy = 0;
