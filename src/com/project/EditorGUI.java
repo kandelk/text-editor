@@ -21,19 +21,21 @@ class EditorGUI extends JFrame{
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setVisible(true);
 
-        jTextArea.setName("TextArea");
         jScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         jScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
+        jTextArea.setName("TextArea");
         fileName.setName("FilenameField");
         saveButton.setName("SaveButton");
         loadButton.setName("LoadButton");
         jScrollPane.setName("ScrollPane");
 
         loadButton.addActionListener((e) -> {
-            if (fileEditor.loadFile(fileName.getText()) == null) {
-                JOptionPane.showMessageDialog(null, "Error in reading file", "Error", JOptionPane.ERROR_MESSAGE);
+            String loadedFile = fileEditor.loadFile(fileName.getText());
+            if (loadedFile == null) {
+                JOptionPane.showMessageDialog(null, "File not found", "Error", JOptionPane.ERROR_MESSAGE);
             }
+            jTextArea.setText(loadedFile);
         });
         saveButton.addActionListener((e) -> {
             if (!fileEditor.saveFile(fileName.getText(), jTextArea.getText())) {
