@@ -1,5 +1,7 @@
 package com.project;
 
+import javafx.util.Pair;
+
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -9,6 +11,8 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class EditorGUI extends JFrame{
     private JTextArea jTextArea = new JTextArea();
@@ -32,6 +36,7 @@ class EditorGUI extends JFrame{
     private JFileChooser fileChooser = new JFileChooser(currDir);
 
     private List<Integer> searchIndexes;
+    private List<Pair<Integer, Integer>> regexpMatch;
     private int index;
 
     EditorGUI() throws HeadlessException {
@@ -51,6 +56,12 @@ class EditorGUI extends JFrame{
 
         jTextArea.setLineWrap(true);
         jTextArea.setWrapStyleWord(true);
+        jTextArea.setFont(new Font(jTextArea.getFont().getFontName(), jTextArea.getFont().getStyle(), 16));
+        jTextArea.setBorder(BorderFactory.createCompoundBorder(
+                jTextArea.getBorder(),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+
+        searchField.setFont(new Font(searchField.getFont().getFontName(), searchField.getFont().getStyle(), 16));
 
         jTextArea.setName("TextArea");
         searchField.setName("FilenameField");
@@ -78,12 +89,12 @@ class EditorGUI extends JFrame{
 
         groupLayout.setVerticalGroup(groupLayout.createSequentialGroup()
                 .addGroup(groupLayout.createParallelGroup()
-                    .addComponent(saveButton,24,24,24)
-                    .addComponent(loadButton,24,24,24)
-                    .addComponent(searchField, 24, 24, 24)
-                    .addComponent(searchButton, 24, 24, 24)
-                    .addComponent(prevButton, 24, 24, 24)
-                    .addComponent(nextButton, 24, 24, 24)
+                    .addComponent(saveButton,28,28,28)
+                    .addComponent(loadButton,28,28,28)
+                    .addComponent(searchField, 28, 28, 28)
+                    .addComponent(searchButton, 28, 28, 28)
+                    .addComponent(prevButton, 28, 28, 28)
+                    .addComponent(nextButton, 28, 28, 28)
                     .addComponent(useRegexp))
                 .addComponent(jScrollPane)
         );
@@ -143,7 +154,7 @@ class EditorGUI extends JFrame{
         };
 
         ActionListener nextWordFind = e -> {
-            if (searchIndexes == null) {
+            if (searchIndexes == null || searchIndexes.isEmpty()) {
                 return;
             }
 
@@ -151,8 +162,11 @@ class EditorGUI extends JFrame{
             if (index == searchIndexes.size()) {
                 index = 0;
             }
-
-            setCaret(searchIndexes.get(index));
+            if (!useRegexp.isSelected()) {
+                setCaret(searchIndexes.get(index));
+            } else {
+                setCaret(regexpMatch.get(index).getKey());
+            }
         };
 
         loadButton.addActionListener(loadListener);
@@ -178,7 +192,11 @@ class EditorGUI extends JFrame{
 
         searchButton.addActionListener(e -> {
             if (searchIndexes == null) {
-                searchString(searchField.getText());
+                if (!useRegexp.isSelected()) {
+                    searchString(searchField.getText());
+                } else {
+                    searchStringRegex(Pattern.compile(searchField.getText()));
+                }
                 index = -1;
             }
 
@@ -188,10 +206,9 @@ class EditorGUI extends JFrame{
         nextButton.addActionListener(nextWordFind);
 
         prevButton.addActionListener(e -> {
-            if (searchIndexes == null) {
+            if (searchIndexes == null || searchIndexes.isEmpty()) {
                 return;
             }
-
 
             if (index == 0) {
                 index = searchIndexes.size();
@@ -217,11 +234,18 @@ class EditorGUI extends JFrame{
                 searchIndexes = null;
             }
         });
+
+        useRegexp.addActionListener(e -> searchIndexes = null);
     }
 
-    private void setCaret(int index) {
-        jTextArea.setCaretPosition(index + searchField.getText().length());
-        jTextArea.select(index, index + searchField.getText().length());
+    private void setCaret(int currPos) {
+        if (!useRegexp.isSelected()) {
+            jTextArea.setCaretPosition(currPos + searchField.getText().length());
+            jTextArea.select(currPos, currPos + searchField.getText().length());
+        } else {
+            jTextArea.setCaretPosition(regexpMatch.get(index).getValue());
+            jTextArea.select(regexpMatch.get(index).getKey(), regexpMatch.get(index).getValue());
+        }
         jTextArea.grabFocus();
     }
 
@@ -244,23 +268,33 @@ class EditorGUI extends JFrame{
 
     private void searchString(String search) {
         int index;
-        List<Integer> list = new ArrayList<>();
+        searchIndexes = new ArrayList<>();
 
         jTextArea.setCaretPosition(0);
         while ((index = jTextArea.getText().indexOf(search, jTextArea.getCaretPosition())) != -1) {
-            list.add(index);
+            searchIndexes.add(index);
             jTextArea.setCaretPosition(index+1);
         }
-
-        searchIndexes = list;
     }
 
-//    private int searchStringRegex(Pattern regexp) {
-//        Matcher matcher = regexp.matcher(jTextArea.getText());
-//
-//    }
+    private void searchStringRegex(Pattern regexp) {
+        searchIndexes = new ArrayList<>();
+        regexpMatch = new ArrayList<>();
+        Matcher matcher = regexp.matcher(jTextArea.getText());
 
-//    private int[] searchString(Regexp regexp) {
-//
-//    }
+        jTextArea.setCaretPosition(0);
+        while (matcher.find(jTextArea.getCaretPosition())) {
+            searchIndexes.add(1);
+            regexpMatch.add(new Pair<>(matcher.start(), matcher.end()));
+
+            if (matcher.end() == matcher.start()) {
+                if (matcher.end()+1 == jTextArea.getText().length()) {
+                    break;
+                }
+                jTextArea.setCaretPosition(matcher.end()+1);
+            } else {
+                jTextArea.setCaretPosition(matcher.end());
+            }
+        }
+    }
 }
