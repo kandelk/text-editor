@@ -23,7 +23,10 @@ class FileEditor {
 
     boolean saveFile(String filename, String text) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
-            writer.write(text);
+            for (String line : text.split("\\n")) {
+                writer.write(line);
+                writer.newLine();
+            }
         } catch (IOException e) {
             return false;
         }
