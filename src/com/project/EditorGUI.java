@@ -1,15 +1,19 @@
 package com.project;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 class EditorGUI extends JFrame{
     private JTextArea jTextArea = new JTextArea();
     private JScrollPane jScrollPane = new JScrollPane(jTextArea);
-    private JTextField fileName = new JTextField();
+    private JTextField searchField = new JTextField();
     private JButton saveButton = new JButton(new ImageIcon("resources/save.png"));
     private JButton loadButton = new JButton(new ImageIcon("resources/load.png"));
     private JButton searchButton = new JButton(new ImageIcon("resources/search.jpg"));
@@ -22,10 +26,13 @@ class EditorGUI extends JFrame{
     private JMenuItem exitMenuItem = new JMenuItem("Exit");
     private JMenuItem saveAsMenuItem = new JMenuItem("Save as");
     private JMenuBar jMenuBar = new JMenuBar();
-    private JCheckBox checkBox = new JCheckBox("Use regexp");
+    private JCheckBox useRegexp = new JCheckBox("Use regexp");
 
     private File currDir = new File(System.getProperty("user.dir"));
     private JFileChooser fileChooser = new JFileChooser(currDir);
+
+    private List<Integer> searchIndexes;
+    private int index;
 
     EditorGUI() throws HeadlessException {
         super("My editor");
@@ -46,7 +53,7 @@ class EditorGUI extends JFrame{
         jTextArea.setWrapStyleWord(true);
 
         jTextArea.setName("TextArea");
-        fileName.setName("FilenameField");
+        searchField.setName("FilenameField");
         saveButton.setName("SaveButton");
         loadButton.setName("LoadButton");
         jScrollPane.setName("ScrollPane");
@@ -73,11 +80,11 @@ class EditorGUI extends JFrame{
                 .addGroup(groupLayout.createParallelGroup()
                     .addComponent(saveButton,24,24,24)
                     .addComponent(loadButton,24,24,24)
-                    .addComponent(fileName, 24, 24, 24)
+                    .addComponent(searchField, 24, 24, 24)
                     .addComponent(searchButton, 24, 24, 24)
                     .addComponent(prevButton, 24, 24, 24)
                     .addComponent(nextButton, 24, 24, 24)
-                    .addComponent(checkBox))
+                    .addComponent(useRegexp))
                 .addComponent(jScrollPane)
         );
 
@@ -85,11 +92,11 @@ class EditorGUI extends JFrame{
                 .addGroup(groupLayout.createSequentialGroup()
                     .addComponent(saveButton)
                     .addComponent(loadButton)
-                    .addComponent(fileName)
+                    .addComponent(searchField)
                     .addComponent(searchButton)
                     .addComponent(prevButton)
                     .addComponent(nextButton)
-                    .addComponent(checkBox))
+                    .addComponent(useRegexp))
                 .addComponent(jScrollPane)
         );
     }
@@ -110,7 +117,7 @@ class EditorGUI extends JFrame{
 
     private void createActionListeners() {
         ActionListener saveListener = e -> {
-            if (fileChooser.getSelectedFile() == null && !chooseSaveDir()) {
+            if (fileChooser.getSelectedFile() == null && !isSaveDirSelected()) {
                 return;
             }
 
@@ -132,6 +139,20 @@ class EditorGUI extends JFrame{
             }
 
             jTextArea.setText(loadedFile);
+            jTextArea.setCaretPosition(0);
+        };
+
+        ActionListener nextWordFind = e -> {
+            if (searchIndexes == null) {
+                return;
+            }
+
+            index++;
+            if (index == searchIndexes.size()) {
+                index = 0;
+            }
+
+            setCaret(searchIndexes.get(index));
         };
 
         loadButton.addActionListener(loadListener);
@@ -145,7 +166,7 @@ class EditorGUI extends JFrame{
         saveMenuItem.addActionListener(saveListener);
 
         saveAsMenuItem.addActionListener(e -> {
-            if (chooseSaveDir()) {
+            if (isSaveDirSelected()) {
                 saveFile();
             }
         });
@@ -154,9 +175,57 @@ class EditorGUI extends JFrame{
             jTextArea.setText("");
             fileChooser.setSelectedFile(null);
         });
+
+        searchButton.addActionListener(e -> {
+            if (searchIndexes == null) {
+                searchString(searchField.getText());
+                index = -1;
+            }
+
+            nextWordFind.actionPerformed(e);
+        });
+
+        nextButton.addActionListener(nextWordFind);
+
+        prevButton.addActionListener(e -> {
+            if (searchIndexes == null) {
+                return;
+            }
+
+
+            if (index == 0) {
+                index = searchIndexes.size();
+            }
+
+            index--;
+            setCaret(searchIndexes.get(index));
+        });
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchIndexes = null;
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchIndexes = null;
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                searchIndexes = null;
+            }
+        });
     }
 
-    private boolean chooseSaveDir() {
+    private void setCaret(int index) {
+        jTextArea.setCaretPosition(index + searchField.getText().length());
+        jTextArea.select(index, index + searchField.getText().length());
+        jTextArea.grabFocus();
+    }
+
+    private boolean isSaveDirSelected() {
         if (fileChooser.showSaveDialog(null) == JFileChooser.CANCEL_OPTION) {
             fileChooser.setCurrentDirectory(currDir);
             return false;
@@ -172,4 +241,26 @@ class EditorGUI extends JFrame{
             JOptionPane.showMessageDialog(null, "Error in saving file", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
+
+    private void searchString(String search) {
+        int index;
+        List<Integer> list = new ArrayList<>();
+
+        jTextArea.setCaretPosition(0);
+        while ((index = jTextArea.getText().indexOf(search, jTextArea.getCaretPosition())) != -1) {
+            list.add(index);
+            jTextArea.setCaretPosition(index+1);
+        }
+
+        searchIndexes = list;
+    }
+
+//    private int searchStringRegex(Pattern regexp) {
+//        Matcher matcher = regexp.matcher(jTextArea.getText());
+//
+//    }
+
+//    private int[] searchString(Regexp regexp) {
+//
+//    }
 }
